@@ -27,7 +27,10 @@ export class TacticalMap {
       zoom: 3,
       minZoom: 2,
       maxZoom: 18,
-      zoomControl: false
+      zoomControl: false,
+      worldCopyJump: false,
+      maxBounds: [[-90, -180], [90, 180]],
+      maxBoundsViscosity: 1.0
     });
 
     // Zoom control at bottom left
@@ -38,7 +41,8 @@ export class TacticalMap {
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       {
         attribution: 'Esri World Imagery, DigitalGlobe, GeoEye, Earthstar Geographics',
-        maxZoom: 18
+        maxZoom: 18,
+        noWrap: true
       }
     );
 
@@ -47,7 +51,8 @@ export class TacticalMap {
       {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
         subdomains: 'abcd',
-        maxZoom: 19
+        maxZoom: 19,
+        noWrap: true
       }
     );
 
@@ -55,7 +60,8 @@ export class TacticalMap {
       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       {
         attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
+        maxZoom: 19,
+        noWrap: true
       }
     );
 
@@ -73,25 +79,26 @@ export class TacticalMap {
     this.hotspotsLayer = L.layerGroup().addTo(this.map);
     this.heatLayer = L.layerGroup().addTo(this.map);
 
-    // Live Cursor Coordinates Tracking HUD
-    this.map.on('mousemove', (e) => {
-      const lat = e.latlng.lat;
-      const lon = e.latlng.lng;
-      const latStr = `${Math.abs(lat).toFixed(5)}° ${lat >= 0 ? 'N' : 'S'}`;
-      const lonStr = `${Math.abs(lon).toFixed(5)}° ${lon >= 0 ? 'E' : 'W'}`;
-      const zoom = this.map.getZoom();
+    // Live Cursor Coordinates Tracking HUD (throttled via rAF)
+    this._cursorLatEl = document.getElementById('cursor-lat');
+    this._cursorLonEl = document.getElementById('cursor-lon');
+    this._cursorZoomEl = document.getElementById('cursor-zoom');
+    this._cursorPending = false;
 
-      const latEl = document.getElementById('cursor-lat');
-      const lonEl = document.getElementById('cursor-lon');
-      const zoomEl = document.getElementById('cursor-zoom');
-      if (latEl) latEl.innerText = latStr;
-      if (lonEl) lonEl.innerText = lonStr;
-      if (zoomEl) zoomEl.innerText = zoom;
+    this.map.on('mousemove', (e) => {
+      if (this._cursorPending) return;
+      this._cursorPending = true;
+      requestAnimationFrame(() => {
+        this._cursorPending = false;
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+        if (this._cursorLatEl) this._cursorLatEl.innerText = `${Math.abs(lat).toFixed(5)}° ${lat >= 0 ? 'N' : 'S'}`;
+        if (this._cursorLonEl) this._cursorLonEl.innerText = `${Math.abs(lon).toFixed(5)}° ${lon >= 0 ? 'E' : 'W'}`;
+      });
     });
 
     this.map.on('zoomend', () => {
-      const zoomEl = document.getElementById('cursor-zoom');
-      if (zoomEl) zoomEl.innerText = this.map.getZoom();
+      if (this._cursorZoomEl) this._cursorZoomEl.innerText = this.map.getZoom();
     });
   }
 
@@ -260,18 +267,6 @@ export class TacticalMap {
       });
 
       marker.addTo(this.hotspotsLayer);
-
-      // If critical industrial emergency, also place animated pulsing radar marker
-      if (isCritical) {
-        const pulseIcon = L.divIcon({
-          className: 'custom-thermal-pin',
-          html: '<div class="radar-marker marker-ind-fire" style="width: 24px; height: 24px;"><div class="radar-marker-pulse"></div></div>',
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
-        });
-        const pulseMarker = L.marker([lat, lon], { icon: pulseIcon, interactive: false });
-        pulseMarker.addTo(this.hotspotsLayer);
-      }
     });
   }
 

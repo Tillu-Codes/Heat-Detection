@@ -228,7 +228,7 @@ def api_firms_validate():
         nasa_count = len(nasa_df)
 
         # 2. Query database count
-        db_hotspots = storage.query_hotspots(limit=100000)
+        db_hotspots = storage.query_hotspots(limit=40000)
         db_count = len(db_hotspots)
 
         # 3. Match Verification Sample
@@ -297,7 +297,7 @@ def api_get_hotspots():
     start_date = request.args.get("start_date", None)
     end_date = request.args.get("end_date", None)
     min_confidence = float(request.args.get("min_confidence", 0.0))
-    limit = int(request.args.get("limit", 100000))
+    limit = int(request.args.get("limit", 40000))
 
     records = storage.query_hotspots(
         category=category,

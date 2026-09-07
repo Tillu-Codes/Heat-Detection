@@ -54,23 +54,27 @@ class CommandCenterApp {
       });
     });
 
-    // FRP Slider
+    // FRP Slider (debounced)
     const frpSlider = document.getElementById('frp-range-slider');
     const frpValDisplay = document.getElementById('frp-val-display');
     if (frpSlider) {
+      let frpTimer = null;
       frpSlider.addEventListener('input', (e) => {
         this.minFrp = parseFloat(e.target.value);
         if (frpValDisplay) frpValDisplay.innerText = `${this.minFrp} MW`;
-        this.applyFilters();
+        clearTimeout(frpTimer);
+        frpTimer = setTimeout(() => this.applyFilters(), 200);
       });
     }
 
-    // Search Box
+    // Search Box (debounced)
     const searchInput = document.getElementById('facility-search-input');
     if (searchInput) {
+      let searchTimer = null;
       searchInput.addEventListener('input', (e) => {
         this.searchTerm = e.target.value.toLowerCase().trim();
-        this.applyFilters();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => this.applyFilters(), 250);
       });
     }
 
